@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timed MCQ Quiz</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        /* Correct and incorrect answers */
+        .correct-answer {
+            background-color: #d1fae5; 
+            border-color: #10b981; 
+        }
+        .correct-answer-text { color: #10b981; }
+        .wrong-answer { background-color: #fee2e2; border-color: #ef4444; }
+        .wrong-answer-text { color: #ef4444; }
+
+        /* Fixed header */
+        #quiz-header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
+            background-color: white;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            padding: 1.5rem 2.5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .main-quiz-container { padding-top: 50px; }
+
+        /* Fade-in for questions */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(100px);
+            animation: fadeInUp 0.7s ease-out forwards;
+        }
+        @keyframes fadeInUp {
+            to { opacity: 1; transform: translateY(70px); }
+        }
+
+        /* Option buttons hover & click */
+        .option-btn {
+            transition: transform 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
+            cursor: pointer;
+        }
+        .option-btn:hover {
+            transform: scale(1.02);
+            background-color: #8bdeff;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.18);
+        }
+        .option-btn:active {
+            transform: scale(0.97);
+            box-shadow: none;
+        }
+
+        /* Results slide-in */
+        .slide-in {
+            transform: translateY(-30px);
+            opacity: 0;
+            animation: slideIn 0.6s cubic-bezier(0.25,1.25,0.5,1) forwards;
+        }
+        @keyframes slideIn {
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .blinking{
+            background-color: #ee7474 ; /* Red */
+            color: white ;
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+           0%, 100% { background-color: #ee7474; color: white; }
+            50% { background-color: #fdfdfd; color: black;}
+        }
+
+        .flex.items-center.bg-gray-100 {
+            transition: background-color 0.2s ease;
+        }
+        .flex.items-center.bg-gray-100:hover {
+            background-color: #e0f2fe; /* Light blue on hover */
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center min-h-screen">
+
+    <!-- Quiz Header -->
+    <header id="quiz-header" class="flex justify-between items-center pb-4">
+        <h1 class="text-3xl font-bold text-gray-800">MCQ Quiz</h1>
+        <div class="flex items-center bg-gray-100 px-3 py-2 rounded-full border border-gray-300 shadow-sm">
+    <!-- Hourglass Icon -->
+    <img src="https://www.svgrepo.com/show/155032/sand-clock.svg" alt="Hourglass" class="h-6 w-6 text-blue-500">
+    <!-- Timer Text -->
+    <div id="timer" class="ml-2 text-lg font-semibold text-gray-800 w-16 text-center">
+        25:00
+    </div>
+</div>
+    </header>
+
+    <!-- Main Quiz Container -->
+    <div class="bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-2xl w-full main-quiz-container">
+        <div id="quiz-container"></div>
+        <br><br>
+        <button id="submit-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-blue-700 transition duration-300 mt-6">
+            Submit Quiz
+        </button>
+
+        <div id="results-container" class="hidden mt-6">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Quiz Results</h2>
+            <div id="score-display" class="text-center text-2xl font-semibold mb-6"></div>
+            <div id="answers-review"></div>
+        </div>
+    </div>
+
+    <script>
+        const quizData = [
+            {
+                questionImage: "https://placehold.co/600x400/007bff/ffffff?text=Question+1",
+                options: ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"],
+                correctAnswer: "2"
+            },
+            {
+                questionImage: "https://placehold.co/600x400/28a745/ffffff?text=Question+2",
+                options: ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"],
+                correctAnswer: "1"
+            },
+            {
+                questionImage: "https://placehold.co/600x400/dc3545/ffffff?text=Question+3",
+                options: ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"],
+                correctAnswer: "3"
+            },
+            {
+                questionImage: "https://placehold.co/600x400/ffc107/ffffff?text=Question+4",
+                options: ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"],
+                correctAnswer: "4"
+            }
+            
+        ];
+
+        const timerDisplay = document.getElementById('timer');
+        const quizContainer = document.getElementById('quiz-container');
+        const resultsContainer = document.getElementById('results-container');
+        const submitBtn = document.getElementById('submit-btn');
+        const scoreDisplay = document.getElementById('score-display');
+        const answersReview = document.getElementById('answers-review');
+
+        let userAnswers = {};
+        let timeLeft = 25 * 60;
+        let timerInterval;
+
+        function renderAllQuestions() {
+            quizContainer.innerHTML = '';
+            quizData.forEach((question, questionIndex) => {
+                const questionCard = document.createElement('div');
+                questionCard.className = "mb-8 p-6 bg-gray-50 rounded-lg border-2 border-gray-100 shadow-md fade-in";
+
+                let optionsHtml = '';
+                question.options.forEach((option, optionIndex) => {
+                    const optionValue = `${optionIndex + 1}`;
+                    optionsHtml += `
+                        <button
+                            class="w-full text-left bg-gray-100 text-gray-800 font-medium py-3 px-4 rounded-lg border-2 border-gray-300 option-btn focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                            data-question-index="${questionIndex}"
+                            data-option="${optionValue}">
+                            ${option}
+                        </button>
+                    `;
+                });
+
+                questionCard.innerHTML = `
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4">Question ${questionIndex + 1}</h2>
+                    <div class="rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm mb-4">
+                        <img class="w-full h-auto object-cover" src="${question.questionImage}" alt="Quiz Question Image">
+                    </div>
+                    <div class="options-container grid gap-3">
+                        ${optionsHtml}
+                    </div>
+                `;
+                quizContainer.appendChild(questionCard);
+            });
+
+            quizContainer.addEventListener('click', (event) => {
+                const target = event.target;
+                if (target.matches('[data-option]')) {
+                    const questionIndex = target.dataset.questionIndex;
+                    const selectedOption = target.dataset.option;
+                    handleAnswer(questionIndex, selectedOption);
+                }
+            });
+        }
+
+        function handleAnswer(questionIndex, selectedOption) {
+            userAnswers[questionIndex] = selectedOption;
+            const questionOptions = quizContainer.querySelectorAll(`[data-question-index="${questionIndex}"]`);
+            questionOptions.forEach(btn => btn.classList.remove('bg-blue-200', 'border-blue-500'));
+
+            const selectedButton = quizContainer.querySelector(`[data-question-index="${questionIndex}"][data-option="${selectedOption}"]`);
+            if (selectedButton) selectedButton.classList.add('bg-blue-200', 'border-blue-500');
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timerDisplay.textContent = `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+
+                // Add blinking class when less than 1 minute
+                if (timeLeft <= 60) {
+                    timerDisplay.parentElement.classList.add("blinking");
+                    timerDisplay.parentElement.classList.remove("bg-gray-100", "text-gray-800");
+                }
+
+                if (timeLeft <= 0) { 
+                    clearInterval(timerInterval); 
+                    submitQuiz(); 
+                }
+            }, 1000);
+        }
+
+        function submitQuiz() {
+            clearInterval(timerInterval);
+            let score = 0;
+            quizContainer.classList.add('hidden');
+            submitBtn.classList.add('hidden');
+            resultsContainer.classList.remove('hidden');
+            resultsContainer.classList.add('slide-in');
+            answersReview.innerHTML = '';
+
+            quizData.forEach((question, index) => {
+                const userAnswer = userAnswers[index];
+                const isCorrect = userAnswer === question.correctAnswer;
+                if (isCorrect) score++;
+
+                const reviewCard = document.createElement('div');
+                reviewCard.className = `p-4 mb-4 rounded-lg border-2 ${isCorrect ? 'correct-answer' : 'wrong-answer'}`;
+                reviewCard.innerHTML = `
+                    <h3 class="font-semibold text-lg mb-2">Question ${index + 1}</h3>
+                    <img src="${question.questionImage}" alt="Question ${index + 1}" class="w-full h-auto object-cover rounded-md mb-3 border-2 border-gray-300">
+                    <p class="font-medium">Your answer:
+                        <span class="${isCorrect ? 'correct-answer-text' : 'wrong-answer-text'}">
+                            ${userAnswer ? `Option ${userAnswer}` : 'No answer'}
+                        </span>
+                    </p>
+                    <p class="font-medium">Correct answer:
+                        <span class="correct-answer-text">
+                            Option ${question.correctAnswer}
+                        </span>
+                    </p>
+                `;
+                answersReview.appendChild(reviewCard);
+            });
+
+            scoreDisplay.textContent = `You scored ${score} out of ${quizData.length}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderAllQuestions();
+            startTimer();
+            submitBtn.addEventListener('click', submitQuiz);
+        });
+    </script>
+</body>
+</html>
