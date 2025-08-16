@@ -50,20 +50,20 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
     <input type="text" id="student-name-input" placeholder="Your Name"
            class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 mb-4">
     <button id="start-quiz-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-blue-700 transition">
-      Start Quiz
+      Continue
     </button>
   </div>
 </div>
 
-<!-- Day selection -->
+<!-- Middle Page / Day Selection -->
 <div id="day-selection">
   <h2 class="text-2xl font-bold mb-4">Physics MCQ Day 1</h2>
-  <p class="text-2xl ">This quiz is timed ⏳<br> Good luck :)</p>
-  <button class="day-btn" data-day="Day 1">Start</button>
+  <p class="text-2xl">This quiz is timed ⏳<br>Good luck :)</p>
+  <button class="day-btn">Start Quiz</button>
 </div>
 
 <!-- Header -->
-<header id="quiz-header">
+<header id="quiz-header" class="hidden">
   <h1 class="text-2xl font-bold text-gray-800">Physics MCQ Quiz</h1>
   <div id="timer-box" class="flex items-center bg-gray-100 px-3 py-2 rounded-full border border-gray-300 shadow-sm transition">
     <img src="https://www.svgrepo.com/show/155032/sand-clock.svg" alt="Hourglass" class="h-6 w-6">
@@ -79,13 +79,13 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
   </button>
   
   <div id="results-container" class="hidden mt-6">
-  <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Quiz Results</h2>
-  <div id="score-display" class="text-center text-2xl font-semibold mb-6"></div>
-  <div id="answers-review"></div>
-  <button id="show-leaderboard-btn" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-green-700 transition mt-3 hidden">
-    Show Leaderboard
-  </button>
-</div>
+    <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Quiz Results</h2>
+    <div id="score-display" class="text-center text-2xl font-semibold mb-6"></div>
+    <div id="answers-review"></div>
+    <button id="show-leaderboard-btn" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-green-700 transition mt-3 hidden">
+      Show Leaderboard
+    </button>
+  </div>
 </div>
 
 <!-- Leaderboard Modal -->
@@ -139,33 +139,31 @@ const showLeaderboardBtn = document.getElementById('show-leaderboard-btn');
 const leaderboardModal = document.getElementById('leaderboard-modal');
 const leaderboardEntries = document.getElementById('leaderboard-entries');
 const closeLeaderboardBtn = document.getElementById('close-leaderboard-btn');
+const quizHeader = document.getElementById('quiz-header');
 
-let studentName='', userAnswers={}, timeLeft=25*60, timerInterval, currentQuiz=null, currentDay='';
+let studentName='', userAnswers={}, timeLeft=25*60, timerInterval, currentQuiz=null, currentDay='Day 1';
 
 // Load saved name
 const savedName = localStorage.getItem("studentName") || "";
 studentNameInput.value = savedName;
 
-// Start button
-startQuizBtn.addEventListener('click', ()=>{
+// Name modal button
+startQuizBtn.addEventListener('click', () => {
   studentName = studentNameInput.value.trim();
   if(!studentName) return alert("Please enter your name");
   localStorage.setItem("studentName", studentName);
-  nameModal.style.display='none';
-  daySelection.style.display='block';
+  nameModal.style.display = 'none';
+  daySelection.style.display = 'block';
 });
 studentNameInput.addEventListener('keydown', e=>{ if(e.key==='Enter') startQuizBtn.click(); });
 
-// Day button
-document.querySelectorAll('.day-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    currentDay=btn.dataset.day;
-    currentQuiz = quizzes[currentDay];
-    daySelection.style.display='none';
-    quizWrapper.style.display='block';
-    renderAllQuestions(currentQuiz);
-    startTimer();
-  });
+// Middle page button
+document.querySelector('.day-btn').addEventListener('click', () => {
+  daySelection.style.display = 'none';
+  quizWrapper.style.display = 'block';
+  quizHeader.classList.remove('hidden');
+  renderAllQuestions(quizzes["Day 1"]);
+  startTimer();
 });
 
 // Render questions
@@ -227,7 +225,7 @@ async function submitQuiz(){
   resultsContainer.classList.add('slide-in');
   answersReview.innerHTML='';
 
-  currentQuiz.forEach((q,i)=>{
+  quizzes["Day 1"].forEach((q,i)=>{
     const ua=userAnswers[i];
     const correct=ua===q.correctAnswer;
     if(correct) score++;
@@ -240,7 +238,7 @@ async function submitQuiz(){
     answersReview.appendChild(card);
   });
 
-  scoreDisplay.textContent = `Well done, ${studentName}! You scored ${score} out of ${currentQuiz.length}`;
+  scoreDisplay.textContent = `Well done, ${studentName}! You scored ${score} out of ${quizzes["Day 1"].length}`;
 
   showLeaderboardBtn.classList.remove('hidden');
 
@@ -254,11 +252,10 @@ async function submitQuiz(){
   });
 }
 
-// Leaderboard popup
+// Leaderboard
 showLeaderboardBtn.addEventListener('click', async ()=>{
   leaderboardEntries.innerHTML='Loading...';
   leaderboardModal.style.display='flex';
-
   try {
     const q = query(
       collection(db,'students'),
@@ -268,48 +265,27 @@ showLeaderboardBtn.addEventListener('click', async ()=>{
       limit(10)
     );
     const snapshot = await getDocs(q);
-
     if(snapshot.empty){
       leaderboardEntries.innerHTML='No entries yet';
       return;
     }
-
-    let table = `
-      <table class="leaderboard-table">
-        <thead>
-          <tr>
-            <th>Rank</th>
-            <th>Name</th>
-            <th>Score</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-
+    let table = `<table class="leaderboard-table"><thead><tr><th>Rank</th><th>Name</th><th>Score</th></tr></thead><tbody>`;
     let rank = 1;
     snapshot.forEach((doc) => {
       const d = doc.data();
       const isCurrent = d.name === studentName;
-      table += `
-        <tr class="${isCurrent ? 'leaderboard-student' : ''}">
-          <td>${rank}</td>
-          <td>${d.name}</td>
-          <td>${d.score}</td>
-        </tr>
-      `;
+      table += `<tr class="${isCurrent ? 'leaderboard-student' : ''}"><td>${rank}</td><td>${d.name}</td><td>${d.score}</td></tr>`;
       rank++;
     });
-
     table += `</tbody></table>`;
     leaderboardEntries.innerHTML = table;
-
   } catch(err) {
     console.error(err);
     leaderboardEntries.innerHTML='Error loading leaderboard. Make sure Firestore index exists.';
   }
 });
-
 closeLeaderboardBtn.addEventListener('click',()=>{ leaderboardModal.style.display='none'; });
 </script>
 </body>
 </html>
+
