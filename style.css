@@ -1,0 +1,49 @@
+body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+
+/* Correct and incorrect answers */
+.correct-answer { background-color: #d1fae5; border-color: #10b981; }
+.correct-answer-text { color: #10b981; }
+.wrong-answer { background-color: #fee2e2; border-color: #ef4444; }
+.wrong-answer-text { color: #ef4444; }
+
+/* Header */
+#quiz-header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  background-color: white; 
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.main-quiz-container { padding-top: 100px; }
+
+/* Fade-in animation */
+.fade-in { opacity: 0; transform: translateY(20px); animation: fadeInUp 0.5s ease-out forwards; }
+@keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+
+/* Buttons */
+.option-btn {
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+.option-btn:hover {
+  transform: scale(1.02);
+  background-color: #e0f2fe;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.18);
+}
+.option-btn:active { transform: scale(0.97); box-shadow: none; }
+
+/* Results slide-in */
+.slide-in { transform: translateY(-20px); opacity: 0; animation: slideIn 0.6s cubic-bezier(0.25,1.25,0.5,1) forwards; }
+@keyframes slideIn { to { transform: translateY(0); opacity: 1; } }
+
+/* Timer blinking */
+.blinking { animation: blink 1s infinite; }
+@keyframes blink { 0%,100%{background-color:#ee7474;color:white;} 50%{background-color:#fff;color:black;} }
+
+/* Modal */
+.modal {
+  position: fixed; inset: 0;
+  background-color: rgba(0,0,0,0.6);
+  display: flex; justify-content: center; align-items: center;
+  z-index: 2000;
+}
