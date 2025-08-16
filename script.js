@@ -1,25 +1,17 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 const firebaseConfig = {
-
-    apiKey: "AIzaSyA9cJ_wC_6h5PWRMw96rUDrMBE_uCIClF8",
-
-    authDomain: "esag-mcq-project.firebaseapp.com",
-
-    projectId: "esag-mcq-project",
-
-    storageBucket: "esag-mcq-project.firebasestorage.app",
-
-    messagingSenderId: "53701860084",
-
-    appId: "1:53701860084:web:eca61389e9860ccbed1ca1",
-
-    measurementId: "G-PNFL3KQ68K"
+  apiKey: "AIzaSyA9cJ_wC_6h5PWRMw96rUDrMBE_uCIClF8",
+  authDomain: "esag-mcq-project.firebaseapp.com",
+  projectId: "esag-mcq-project",
+  storageBucket: "esag-mcq-project.appspot.com",
+  messagingSenderId: "53701860084",
+  appId: "1:53701860084:web:eca61389e9860ccbed1ca1",
+  measurementId: "G-PNFL3KQ68K"
 };
-  // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 
 // Quizzes by day
@@ -138,7 +130,7 @@ function submitQuiz(){
   resultsContainer.classList.add('slide-in');
   answersReview.innerHTML='';
 
-  updateData();
+  updateData(score);
 
   currentQuiz.forEach((q,i)=>{
     const ua=userAnswers[i];
@@ -156,21 +148,20 @@ function submitQuiz(){
   scoreDisplay.textContent = studentName?`Well done, ${studentName}! You scored ${score} out of ${currentQuiz.length}`:`You scored ${score} out of ${currentQuiz.length}`;
 }
 
-function updateData(){
-    const studentID = studentName + '_' + Date.now(); // or generate a unique ID
-    const quizDay = "day1"; // dynamically set for different days
+async function updateData(score) {
+  const studentID = studentName + '_' + Date.now(); // unique ID
+  const quizDay = "day1"; // set dynamically for each day
 
-    db.collection("students").doc(studentID).set({
-    name: studentName,
-    [quizDay]: {
+  try {
+    await setDoc(doc(db, "students", studentID), {
+      name: studentName,
+      [quizDay]: {
         score: score,
-        timeSpent: 25*60 - timeLeft // seconds spent
-    }
-    })
-    .then(() => {
-    console.log("Student data saved successfully!");
-    })
-    .catch((error) => {
-    console.error("Error saving student data:", error);
+        timeSpent: 25*60 - timeLeft // seconds
+      }
     });
+    console.log("Student data saved successfully!");
+  } catch (error) {
+    console.error("Error saving student data:", error);
+  }
 }
