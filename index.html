@@ -33,7 +33,7 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
 .leaderboard-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; text-align: center; border-radius: 10px; border: 1px solid #d8d6d6; overflow: hidden; }
 .leaderboard-table th, .leaderboard-table td { border: 1px solid #ddd; padding: 8px; }
 .leaderboard-table th { background-color: #ffffff; color: rgb(0, 0, 0); }
-.leaderboard-student { background-color: #f3ff4d; }
+.leaderboard-student { background-color: #4dffc4; }
 .leaderboard-table tr:hover { background-color: #d3d3d3; }
 #nameBox{ animation: popup 0.5s ease-in forwards;}
 @keyframes popup { 0%{scale: 90%; opacity: 0; transform: scaleX(75%) scaleY(90%);} 50%{scale: 105%; transform: scaleX(100%); opacity: 1;} 70%{transform: scaleY(100%);} 100%{scale: 100%; }}
@@ -59,7 +59,6 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
   <h2 class="text-2xl font-bold mb-4">Select Day</h2>
   <p class="text-2xl ">This quiz is timed ⏳<br> Good luck :)</p>
   <button class="day-btn" data-day="Day 1">Day 1</button>
-  <button class="day-btn" data-day="Day 2">Day 2</button>
 </div>
 
 <!-- Header -->
@@ -119,10 +118,6 @@ const quizzes = {
   "Day 1": [
     { questionImage:"https://placehold.co/600x400/007bff/ffffff?text=Day+1+Q1", options:["1","2","3","4","5"], correctAnswer:"2" },
     { questionImage:"https://placehold.co/600x400/28a745/ffffff?text=Day+1+Q2", options:["1","2","3","4","5"], correctAnswer:"1" }
-  ],
-  "Day 2": [
-    { questionImage:"https://placehold.co/600x400/dc3545/ffffff?text=Day+2+Q1", options:["1","2","3","4","5"], correctAnswer:"3" },
-    { questionImage:"https://placehold.co/600x400/ffc107/ffffff?text=Day+2+Q2", options:["1","2","3","4","5"], correctAnswer:"4" }
   ]
 };
 
@@ -160,7 +155,7 @@ startQuizBtn.addEventListener('click', ()=>{
 });
 studentNameInput.addEventListener('keydown', e=>{ if(e.key==='Enter') startQuizBtn.click(); });
 
-// Day buttons
+// Day button
 document.querySelectorAll('.day-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
     currentDay=btn.dataset.day;
@@ -246,8 +241,6 @@ async function submitQuiz(){
 
   scoreDisplay.textContent = `Well done, ${studentName}! You scored ${score} out of ${currentQuiz.length}`;
 
-  // Show the leaderboard button now
-  const showLeaderboardBtn = document.getElementById('show-leaderboard-btn');
   showLeaderboardBtn.classList.remove('hidden');
 
   // Save to Firebase
@@ -259,7 +252,6 @@ async function submitQuiz(){
     timeSpent: 25*60 - timeLeft
   });
 }
-
 
 // Leaderboard popup
 showLeaderboardBtn.addEventListener('click', async ()=>{
@@ -320,7 +312,3 @@ closeLeaderboardBtn.addEventListener('click',()=>{ leaderboardModal.style.displa
 </script>
 </body>
 </html>
-
-
-
-
