@@ -12,15 +12,8 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
 .correct-answer-text { color: #10b981; }
 .wrong-answer { background-color: #fee2e2; border-color: #ef4444; }
 .wrong-answer-text { color: #ef4444; }
-#quiz-header {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-  background-color: white; 
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  padding: 1rem 2rem;
-  border-bottom: 1px solid #e5e7eb;
-  display: flex; justify-content: space-between; align-items: center;
-}
-.main-quiz-container { padding-top: 120px; }
+#quiz-header { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background-color: white; box-shadow: 0 2px 6px rgba(0,0,0,0.1); padding: 1rem 2rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+.main-quiz-container { padding-top: 120px; transform: translateY(100px);}
 .fade-in { opacity: 0; transform: translateY(20px); animation: fadeInUp 0.5s ease-out forwards; margin-left:auto;margin-right:auto; max-width:700px;}
 @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
 .option-btn { transition: all 0.25s ease; cursor: pointer; }
@@ -37,14 +30,21 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
 #day-selection { display:none; text-align:center; margin-top:150px; }
 .day-btn { margin:0.5rem 1rem; padding:0.5rem 1.5rem; background:#3b82f6; color:white; border-radius:0.5rem; cursor:pointer; }
 .day-btn:hover { background:#2563eb; }
+.leaderboard-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; text-align: center; border-radius: 10px; border: 1px solid #d8d6d6; overflow: hidden; }
+.leaderboard-table th, .leaderboard-table td { border: 1px solid #ddd; padding: 8px; }
+.leaderboard-table th { background-color: #ffffff; color: rgb(0, 0, 0); }
+.leaderboard-student { background-color: #f3ff4d; }
+.leaderboard-table tr:hover { background-color: #d3d3d3; }
+#nameBox{ animation: popup 0.5s ease-in forwards;}
+@keyframes popup { 0%{scale: 90%; opacity: 0; transform: scaleX(75%) scaleY(90%);} 50%{scale: 105%; transform: scaleX(100%); opacity: 1;} 70%{transform: scaleY(100%);} 100%{scale: 100%; }}
 </style>
 </head>
 <body class="flex flex-col items-center min-h-screen">
 
 <!-- Name Modal -->
 <div id="name-modal" class="modal">
-  <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center">
-    <h2 class="text-2xl font-bold text-gray-800 mb-4">Welcome to the Quiz!</h2>
+  <div id="nameBox" class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center">
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">Welcome to the ESAG Quiz Center!</h2>
     <p class="text-gray-600 mb-6">Please enter your name to begin.</p>
     <input type="text" id="student-name-input" placeholder="Your Name"
            class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 mb-4">
@@ -63,7 +63,7 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
 
 <!-- Header -->
 <header id="quiz-header">
-  <h1 class="text-2xl font-bold text-gray-800">MCQ Quiz</h1>
+  <h1 class="text-2xl font-bold text-gray-800">Physics MCQ Quiz</h1>
   <div id="timer-box" class="flex items-center bg-gray-100 px-3 py-2 rounded-full border border-gray-300 shadow-sm transition">
     <img src="https://www.svgrepo.com/show/155032/sand-clock.svg" alt="Hourglass" class="h-6 w-6">
     <div id="timer" class="ml-2 text-lg font-semibold text-gray-800 w-16 text-center tabular-nums">25:00</div>
@@ -76,15 +76,15 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
   <button id="submit-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-blue-700 transition mt-6">
     Submit Quiz
   </button>
-  <button id="show-leaderboard-btn" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-green-700 transition mt-3">
+  
+  <div id="results-container" class="hidden mt-6">
+  <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Quiz Results</h2>
+  <div id="score-display" class="text-center text-2xl font-semibold mb-6"></div>
+  <div id="answers-review"></div>
+  <button id="show-leaderboard-btn" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-green-700 transition mt-3 hidden">
     Show Leaderboard
   </button>
-
-  <div id="results-container" class="hidden mt-6">
-    <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Quiz Results</h2>
-    <div id="score-display" class="text-center text-2xl font-semibold mb-6"></div>
-    <div id="answers-review"></div>
-  </div>
+</div>
 </div>
 
 <!-- Leaderboard Modal -->
@@ -145,10 +145,15 @@ const closeLeaderboardBtn = document.getElementById('close-leaderboard-btn');
 
 let studentName='', userAnswers={}, timeLeft=25*60, timerInterval, currentQuiz=null, currentDay='';
 
+// Load saved name
+const savedName = localStorage.getItem("studentName") || "";
+studentNameInput.value = savedName;
+
 // Start button
 startQuizBtn.addEventListener('click', ()=>{
   studentName = studentNameInput.value.trim();
   if(!studentName) return alert("Please enter your name");
+  localStorage.setItem("studentName", studentName);
   nameModal.style.display='none';
   daySelection.style.display='block';
 });
@@ -166,7 +171,7 @@ document.querySelectorAll('.day-btn').forEach(btn=>{
   });
 });
 
-// Render
+// Render questions
 function renderAllQuestions(quiz){
   quizContainer.innerHTML='';
   quiz.forEach((q,i)=>{
@@ -193,7 +198,7 @@ function renderAllQuestions(quiz){
   });
 }
 
-// Answer handling
+// Handle answer
 function handleAnswer(qIndex,opt){
   userAnswers[qIndex]=opt;
   const opts=quizContainer.querySelectorAll(`[data-question-index="${qIndex}"]`);
@@ -240,6 +245,10 @@ async function submitQuiz(){
 
   scoreDisplay.textContent = `Well done, ${studentName}! You scored ${score} out of ${currentQuiz.length}`;
 
+  // Show the leaderboard button now
+  const showLeaderboardBtn = document.getElementById('show-leaderboard-btn');
+  showLeaderboardBtn.classList.remove('hidden');
+
   // Save to Firebase
   const studentID = studentName+'_'+Date.now();
   await setDoc(doc(collection(db,'students'),studentID),{
@@ -250,21 +259,62 @@ async function submitQuiz(){
   });
 }
 
+
 // Leaderboard popup
 showLeaderboardBtn.addEventListener('click', async ()=>{
   leaderboardEntries.innerHTML='Loading...';
   leaderboardModal.style.display='flex';
-  const q = query(collection(db,'students'), where("day","==",currentDay), orderBy("score","desc"), limit(10));
-  const snapshot = await getDocs(q);
-  leaderboardEntries.innerHTML='';
-  snapshot.forEach(docSnap=>{
-    const d = docSnap.data();
-    const div = document.createElement('div');
-    div.className='p-2 border-b';
-    div.textContent = `${d.name} - ${d.score} / ${currentQuiz.length}`;
-    leaderboardEntries.appendChild(div);
-  });
+
+  try {
+    const q = query(
+      collection(db,'students'),
+      where("day","==",currentDay),
+      orderBy("score","desc"),
+      orderBy("timeSpent","asc"),
+      limit(10)
+    );
+    const snapshot = await getDocs(q);
+
+    if(snapshot.empty){
+      leaderboardEntries.innerHTML='No entries yet';
+      return;
+    }
+
+    let table = `
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Name</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    let rank = 1;
+    snapshot.forEach((doc) => {
+      const d = doc.data();
+      const isCurrent = d.name === studentName;
+      table += `
+        <tr class="${isCurrent ? 'leaderboard-student' : ''}">
+          <td>${rank}</td>
+          <td>${d.name}</td>
+          <td>${d.score}</td>
+        </tr>
+      `;
+      rank++;
+    });
+
+    table += `</tbody></table>`;
+    leaderboardEntries.innerHTML = table;
+
+  } catch(err) {
+    console.error(err);
+    leaderboardEntries.innerHTML='Error loading leaderboard. Make sure Firestore index exists.';
+  }
 });
+
 closeLeaderboardBtn.addEventListener('click',()=>{ leaderboardModal.style.display='none'; });
 </script>
 </body>
