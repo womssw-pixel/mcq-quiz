@@ -25,7 +25,7 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
 @keyframes slideIn { to { transform: translateY(0); opacity: 1; } }
 .blinking { animation: blink 1s infinite; }
 @keyframes blink { 0%,100%{border-color:#fa4545;color:white;} 50%{border-color:#1a1a1a;color:black;} }
-.modal { position: fixed; inset: 0; display: flex; justify-content: center; align-items: center; z-index: 2000; }
+.modal { position: fixed; inset: 0; display: flex; justify-content: center; align-items: center; z-index: 2000; background-color: rgba(0,0,0,0.6); }
 #leaderboard-modal { display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 4000; animation: fadeInModal 0.3s ease-out forwards; }
 #leaderboard-content { background:white; padding:2rem; border-radius:1rem; max-width:600px; width:90%; text-align:center; position: relative; z-index: 10; }
 @keyframes fadeInModal { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
@@ -45,11 +45,11 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
 .leaderboard-table td:nth-child(2) { border-left: none; border-right: none; }
 .leaderboard-table td:nth-child(3) { border-left: none; }
 #confetti-canvas { position:absolute; inset:0; pointer-events:none; z-index:4000; width: 100%; height: 100%; }
+.alert-modal-content { animation: popup 0.5s ease-in forwards; }
 </style>
 </head>
 <body class="flex flex-col items-center min-h-screen">
 
-<!-- Name Modal -->
 <div id="name-modal" class="modal">
   <div id="nameBox" class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center">
     <h2 class="text-2xl font-bold text-gray-800 mb-4">Welcome to the ESAG Quiz Center!</h2>
@@ -62,14 +62,24 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
   </div>
 </div>
 
-<!-- Middle Page / Day Selection -->
-<div id="day-selection">
+<div id="alert-modal" class="modal hidden">
+    <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center alert-modal-content">
+        <div class="p-4 bg-red-100 rounded-lg text-red-700 mb-4">
+            <h3 class="font-bold">Name Taken!</h3>
+            <p class="text-sm mt-1">This name is already in use. Please try a different name.</p>
+        </div>
+        <button id="close-alert-btn" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-red-700 transition">
+            Close
+        </button>
+    </div>
+</div>
+
+<div id="day-selection" class="hidden">
   <h2 class="text-2xl font-bold mb-4">Physics MCQ Day 1</h2>
   <p class="text-2xl">This quiz is timed ⏳<br>Good luck :)</p>
   <button class="day-btn">Start Quiz</button>
 </div>
 
-<!-- Header -->
 <header id="quiz-header" class="hidden">
   <h1 class="text-2xl font-bold text-gray-800">Physics MCQ Quiz</h1>
   <div id="timer-box" class="flex items-center bg-gray-100 px-3 py-2 rounded-full border border-gray-300 shadow-sm transition">
@@ -78,7 +88,6 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
   </div>
 </header>
 
-<!-- Quiz -->
 <div id="quiz-wrapper" class="hidden bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-2xl w-full main-quiz-container">
   <div id="quiz-container"></div>
   <button id="submit-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-blue-700 transition mt-6">
@@ -95,7 +104,6 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
   </div>
 </div>
 
-<!-- Leaderboard Modal -->
 <div id="leaderboard-modal" class="modal">
   <canvas id="confetti-canvas"></canvas>
   <div id="leaderboard-content">
@@ -147,6 +155,8 @@ const leaderboardEntries = document.getElementById('leaderboard-entries');
 const closeLeaderboardBtn = document.getElementById('close-leaderboard-btn');
 const quizHeader = document.getElementById('quiz-header');
 const confettiCanvas = document.getElementById('confetti-canvas');
+const alertModal = document.getElementById('alert-modal');
+const closeAlertBtn = document.getElementById('close-alert-btn');
 
 let studentName='', studentID='', userAnswers={}, timeLeft=setTime*60, timerInterval, currentDay='Day 1';
 
@@ -192,7 +202,13 @@ async function showLeaderboard(currentStudent){
 // Name modal logic
 startQuizBtn.addEventListener('click', async () => {
   studentName = studentNameInput.value.trim();
-  if(!studentName) return alert("Please enter your name");
+  if(!studentName) {
+    // Re-using the same modal for "Please enter your name"
+    alertModal.querySelector('h3').textContent = 'Name Required!';
+    alertModal.querySelector('p').textContent = 'Please enter your name to continue.';
+    alertModal.style.display = 'flex';
+    return;
+  }
 
   const nameQuery = query(collection(db, collectionName), where("name","==",studentName));
   const snapshot = await getDocs(nameQuery);
@@ -205,7 +221,11 @@ startQuizBtn.addEventListener('click', async () => {
   if(!snapshot.empty){
     const data = snapshot.docs[0].data();
     if(data.id !== studentID){
-      return alert("This name is already taken by another student!");
+      // Show custom name taken modal instead of alert()
+      alertModal.querySelector('h3').textContent = 'Name Taken!';
+      alertModal.querySelector('p').textContent = 'This name is already in use. Please try a different name.';
+      alertModal.style.display = 'flex';
+      return;
     }
     // Student exists → show result sheet
     const savedAnswers = data.answers || {};
@@ -240,6 +260,11 @@ startQuizBtn.addEventListener('click', async () => {
   nameModal.style.display = 'none';
   daySelection.style.display = 'block';
   localStorage.setItem("studentName", studentName);
+});
+
+// Close alert modal logic
+closeAlertBtn.addEventListener('click', () => {
+    alertModal.style.display = 'none';
 });
 
 studentNameInput.addEventListener('keydown', e=>{ if(e.key==='Enter') startQuizBtn.click(); });
@@ -296,7 +321,15 @@ function startTimer(){
     const m=Math.floor(timeLeft/60).toString().padStart(2,'0');
     const s=(timeLeft%60).toString().padStart(2,'0');
     timerDisplay.textContent=`${m}:${s}`;
-    if(timeLeft<=0){
+    
+    // Add or remove blinking class based on time left
+    if(timeLeft < 60 && timeLeft > 0) {
+      timerBox.classList.add('blinking');
+    } else {
+      timerBox.classList.remove('blinking');
+    }
+
+    if(timeLeft <= 0){
       clearInterval(timerInterval);
       submitQuiz();
     }
@@ -331,11 +364,11 @@ function submitQuiz(){
     const div=document.createElement('div');
     div.className='mb-6 p-4 rounded-lg border';
     div.innerHTML=`<div class="mb-3 rounded overflow-hidden border-2 border-gray-200 shadow-sm">
-        <img class="w-full h-auto object-cover" src="${q.questionImage}" alt="Question ${i+1}">
-      </div>
-      <p class="${ans==q.correctAnswer?'correct-answer-text':'wrong-answer-text'}">
-        Q${i+1} - Your Answer: ${ans||"No Answer"} | Correct: ${q.correctAnswer}
-      </p>`;
+      <img class="w-full h-auto object-cover" src="${q.questionImage}" alt="Question ${i+1}">
+    </div>
+    <p class="${ans==q.correctAnswer?'correct-answer-text':'wrong-answer-text'}">
+      Q${i+1} - Your Answer: ${ans||"No Answer"} | Correct: ${q.correctAnswer}
+    </p>`;
     if(ans==q.correctAnswer) div.classList.add('correct-answer');
     else div.classList.add('wrong-answer');
     answersReview.appendChild(div);
@@ -348,6 +381,3 @@ closeLeaderboardBtn.addEventListener('click',()=>leaderboardModal.style.display=
 </script>
 </body>
 </html>
-
-
-
