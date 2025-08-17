@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MCQ Quiz with Leaderboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
@@ -23,21 +24,27 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
 .slide-in { transform: translateY(-20px); opacity: 0; animation: slideIn 0.6s cubic-bezier(0.25,1.25,0.5,1) forwards; }
 @keyframes slideIn { to { transform: translateY(0); opacity: 1; } }
 .blinking { animation: blink 1s infinite; }
-@keyframes blink { 0%,100%{background-color:#ee7474;color:white;} 50%{background-color:#fff;color:black;} }
-.modal { position: fixed; inset: 0; background-color: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 2000; }
-#leaderboard-modal { display:none; justify-content:center; align-items:center; z-index:3000; }
-#leaderboard-content { background:white; padding:2rem; border-radius:1rem; max-width:600px; width:90%; text-align:center;}
-#leaderboard-content button { margin-top:1rem; display:inline-block;}
+@keyframes blink { 0%,100%{border-color:#fa4545;color:white;} 50%{border-color:#1a1a1a;color:black;} }
+.modal { position: fixed; inset: 0; display: flex; justify-content: center; align-items: center; z-index: 2000; }
+#leaderboard-modal { display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 4000; animation: fadeInModal 0.3s ease-out forwards; }
+#leaderboard-content { background:white; padding:2rem; border-radius:1rem; max-width:600px; width:90%; text-align:center; position: relative; z-index: 10; }
+@keyframes fadeInModal { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
 #day-selection { display:none; text-align:center; margin-top:150px; }
 .day-btn { margin:0.5rem 1rem; padding:0.5rem 1.5rem; background:#3b82f6; color:white; border-radius:0.5rem; cursor:pointer; }
 .day-btn:hover { background:#2563eb; }
 .leaderboard-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; text-align: center; border-radius: 10px; border: 1px solid #d8d6d6; overflow: hidden; }
 .leaderboard-table th, .leaderboard-table td { border: 1px solid #ddd; padding: 8px; }
 .leaderboard-table th { background-color: #ffffff; color: rgb(0, 0, 0); }
-.leaderboard-student { background-color: #4dffc4; }
+.leaderboard-student { background-color: #78f56d;}
 .leaderboard-table tr:hover { background-color: #d3d3d3; }
 #nameBox{ animation: popup 0.5s ease-in forwards;}
 @keyframes popup { 0%{scale: 90%; opacity: 0; transform: scaleX(75%) scaleY(90%);} 50%{scale: 105%; transform: scaleX(100%); opacity: 1;} 70%{transform: scaleY(100%);} 100%{scale: 100%; }}
+.leaderboard-row { opacity: 0; transform: translateX(-50px); animation: fadeInRow 0.5s forwards; }
+@keyframes fadeInRow { to { opacity: 1; transform: translateX(0); } }
+.leaderboard-table td:nth-child(1){ border-right: none; }
+.leaderboard-table td:nth-child(2) { border-left: none; border-right: none; }
+.leaderboard-table td:nth-child(3) { border-left: none; }
+#confetti-canvas { position:absolute; inset:0; pointer-events:none; z-index:4000; width: 100%; height: 100%; }
 </style>
 </head>
 <body class="flex flex-col items-center min-h-screen">
@@ -77,7 +84,7 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
   <button id="submit-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-blue-700 transition mt-6">
     Submit Quiz
   </button>
-  
+
   <div id="results-container" class="hidden mt-6">
     <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Quiz Results</h2>
     <div id="score-display" class="text-center text-2xl font-semibold mb-6"></div>
@@ -90,6 +97,7 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
 
 <!-- Leaderboard Modal -->
 <div id="leaderboard-modal" class="modal">
+  <canvas id="confetti-canvas"></canvas>
   <div id="leaderboard-content">
     <h2 class="text-2xl font-bold mb-4">Leaderboard</h2>
     <div id="leaderboard-entries" class="mb-4"></div>
@@ -98,7 +106,6 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
 </div>
 
 <script type="module">
-// Firebase config
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, getDocs, query, orderBy, limit, where } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
@@ -114,15 +121,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Quizzes
 const quizzes = {
   "Day 1": [
     { questionImage:"https://placehold.co/600x400/007bff/ffffff?text=Day+1+Q1", options:["1","2","3","4","5"], correctAnswer:"2" },
     { questionImage:"https://placehold.co/600x400/28a745/ffffff?text=Day+1+Q2", options:["1","2","3","4","5"], correctAnswer:"1" }
   ]
 };
-
-// Elements
+const setTime = 2;
+const collectionName = 'students';
 const timerDisplay = document.getElementById('timer');
 const timerBox = document.getElementById('timer-box');
 const quizContainer = document.getElementById('quiz-container');
@@ -140,29 +146,110 @@ const leaderboardModal = document.getElementById('leaderboard-modal');
 const leaderboardEntries = document.getElementById('leaderboard-entries');
 const closeLeaderboardBtn = document.getElementById('close-leaderboard-btn');
 const quizHeader = document.getElementById('quiz-header');
+const confettiCanvas = document.getElementById('confetti-canvas');
 
-let studentName='', userAnswers={}, timeLeft=25*60, timerInterval, currentQuiz=null, currentDay='Day 1';
+let studentName='', studentID='', userAnswers={}, timeLeft=setTime*60, timerInterval, currentDay='Day 1';
 
-// Load saved name
-const savedName = localStorage.getItem("studentName") || "";
-studentNameInput.value = savedName;
+// Prefill saved name and ID
+const savedName = localStorage.getItem("studentName");
+if (savedName) studentNameInput.value = savedName;
+const savedID = localStorage.getItem("studentID");
+if (savedID) studentID = savedID;
 
-// Name modal button
-startQuizBtn.addEventListener('click', () => {
+// Leaderboard function
+async function showLeaderboard(currentStudent){
+  leaderboardEntries.innerHTML='Loading...';
+  leaderboardModal.style.display='flex';
+  const confettiInstance = confetti.create(confettiCanvas, { resize:true, useWorker:true });
+  try {
+    const q = query(
+      collection(db, collectionName),
+      where("day", "==", currentDay),
+      orderBy("score","desc"),
+      orderBy("timeSpent","asc"),
+      limit(10)
+    );
+    const snapshot = await getDocs(q);
+    if(snapshot.empty){ leaderboardEntries.innerHTML='No entries yet'; return; }
+
+    let table = `<table class="leaderboard-table"><thead><tr><th>Rank</th><th>Name</th><th>Score</th></tr></thead><tbody>`;
+    let rank = 1;
+    snapshot.forEach((doc) => {
+      const d = doc.data();
+      const isCurrent = d.name === currentStudent;
+      table += `<tr class="leaderboard-row ${isCurrent ? 'leaderboard-student' : ''}" style="animation-delay:${(rank-1)*0.1}s"><td>${rank}</td><td>${d.name}</td><td>${d.score}</td></tr>`;
+      if(isCurrent) confettiInstance({ particleCount: 80, spread: 70, origin: { y: 0.3 } });
+      rank++;
+    });
+    table += `</tbody></table>`;
+    leaderboardEntries.innerHTML = table;
+  } catch(err) {
+    console.error(err);
+    leaderboardEntries.innerHTML='Error loading leaderboard.';
+  }
+}
+
+// Name modal logic
+startQuizBtn.addEventListener('click', async () => {
   studentName = studentNameInput.value.trim();
   if(!studentName) return alert("Please enter your name");
-  localStorage.setItem("studentName", studentName);
+
+  const nameQuery = query(collection(db, collectionName), where("name","==",studentName));
+  const snapshot = await getDocs(nameQuery);
+
+  if(!studentID) {
+    studentID = crypto.randomUUID();
+    localStorage.setItem("studentID", studentID);
+  }
+
+  if(!snapshot.empty){
+    const data = snapshot.docs[0].data();
+    if(data.id !== studentID){
+      return alert("This name is already taken by another student!");
+    }
+    // Student exists → show result sheet
+    const savedAnswers = data.answers || {};
+    const savedScore = data.score || 0;
+    nameModal.style.display = 'none';
+    quizWrapper.style.display = 'block';
+    quizHeader.classList.remove('hidden');
+    resultsContainer.classList.remove('hidden');
+    submitBtn.style.display = 'none';
+    scoreDisplay.textContent = `Your Score: ${savedScore} / ${quizzes[currentDay].length}`;
+    answersReview.innerHTML='';
+    quizzes[currentDay].forEach((q,i)=>{
+      const ans = savedAnswers[i] || '';
+      const div = document.createElement('div');
+      div.className='mb-6 p-4 rounded-lg border';
+      div.innerHTML=`<div class="mb-3 rounded overflow-hidden border-2 border-gray-200 shadow-sm">
+        <img class="w-full h-auto object-cover" src="${q.questionImage}" alt="Question ${i+1}">
+      </div>
+      <p class="${ans==q.correctAnswer?'correct-answer-text':'wrong-answer-text'}">
+        Q${i+1} - Your Answer: ${ans || "No Answer"} | Correct: ${q.correctAnswer}
+      </p>`;
+      if(ans==q.correctAnswer) div.classList.add('correct-answer');
+      else div.classList.add('wrong-answer');
+      answersReview.appendChild(div);
+    });
+    showLeaderboardBtn.classList.remove('hidden');
+    localStorage.setItem("studentName", studentName);
+    return;
+  }
+
+  // Name not taken → proceed
   nameModal.style.display = 'none';
   daySelection.style.display = 'block';
+  localStorage.setItem("studentName", studentName);
 });
+
 studentNameInput.addEventListener('keydown', e=>{ if(e.key==='Enter') startQuizBtn.click(); });
 
-// Middle page button
+// Middle page
 document.querySelector('.day-btn').addEventListener('click', () => {
   daySelection.style.display = 'none';
   quizWrapper.style.display = 'block';
   quizHeader.classList.remove('hidden');
-  renderAllQuestions(quizzes["Day 1"]);
+  renderAllQuestions(quizzes[currentDay]);
   startTimer();
 });
 
@@ -206,86 +293,61 @@ function handleAnswer(qIndex,opt){
 function startTimer(){
   timerInterval=setInterval(()=>{
     timeLeft--;
-    const m=Math.floor(timeLeft/60);
-    const s=timeLeft%60;
-    timerDisplay.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    if(timeLeft<=60) timerBox.classList.add("blinking");
-    if(timeLeft<=0){ clearInterval(timerInterval); submitQuiz(); }
+    const m=Math.floor(timeLeft/60).toString().padStart(2,'0');
+    const s=(timeLeft%60).toString().padStart(2,'0');
+    timerDisplay.textContent=`${m}:${s}`;
+    if(timeLeft<=0){
+      clearInterval(timerInterval);
+      submitQuiz();
+    }
   },1000);
 }
 
-// Submit quiz
-submitBtn.addEventListener('click',submitQuiz);
-async function submitQuiz(){
+// Submit
+submitBtn.addEventListener('click', submitQuiz);
+function submitQuiz(){
   clearInterval(timerInterval);
+  const quizData = quizzes[currentDay];
   let score=0;
-  quizContainer.classList.add('hidden');
-  submitBtn.classList.add('hidden');
-  resultsContainer.classList.remove('hidden');
-  resultsContainer.classList.add('slide-in');
-  answersReview.innerHTML='';
-
-  quizzes["Day 1"].forEach((q,i)=>{
-    const ua=userAnswers[i];
-    const correct=ua===q.correctAnswer;
-    if(correct) score++;
-    const card=document.createElement('div');
-    card.className=`p-4 mb-4 rounded-lg border-2 ${correct?'correct-answer':'wrong-answer'}`;
-    card.innerHTML=`<h3 class="font-semibold text-lg mb-2">Question ${i+1}</h3>
-      <img src="${q.questionImage}" class="w-full rounded-md mb-3 border-2 border-gray-300">
-      <p class="font-medium">Your answer: <span class="${correct?'correct-answer-text':'wrong-answer-text'}">${ua?`Option ${ua}`:'No answer'}</span></p>
-      <p class="font-medium">Correct answer: <span class="correct-answer-text">Option ${q.correctAnswer}</span></p>`;
-    answersReview.appendChild(card);
+  quizData.forEach((q,i)=>{
+    if(userAnswers[i]==q.correctAnswer) score++;
   });
-
-  scoreDisplay.textContent = `Well done, ${studentName}! You scored ${score} out of ${quizzes["Day 1"].length}`;
-
+  scoreDisplay.textContent=`Your Score: ${score} / ${quizData.length}`;
+  
+  // Hide quiz questions
+  quizContainer.style.display = 'none';
+  submitBtn.style.display='none';
+  resultsContainer.classList.remove('hidden');
   showLeaderboardBtn.classList.remove('hidden');
 
-  // Save to Firebase
-  const studentID = studentName+'_'+Date.now();
-  await setDoc(doc(collection(db,'students'),studentID),{
-    name: studentName,
-    day: currentDay,
-    score: score,
-    timeSpent: 25*60 - timeLeft
+  // Save to Firestore
+  const docRef = doc(db, collectionName, studentID);
+  setDoc(docRef, { name: studentName, id: studentID, day: currentDay, answers: userAnswers, score:score, timeSpent:setTime*60-timeLeft });
+
+  // Show answers
+  answersReview.innerHTML='';
+  quizData.forEach((q,i)=>{
+    const ans=userAnswers[i]||'';
+    const div=document.createElement('div');
+    div.className='mb-6 p-4 rounded-lg border';
+    div.innerHTML=`<div class="mb-3 rounded overflow-hidden border-2 border-gray-200 shadow-sm">
+        <img class="w-full h-auto object-cover" src="${q.questionImage}" alt="Question ${i+1}">
+      </div>
+      <p class="${ans==q.correctAnswer?'correct-answer-text':'wrong-answer-text'}">
+        Q${i+1} - Your Answer: ${ans||"No Answer"} | Correct: ${q.correctAnswer}
+      </p>`;
+    if(ans==q.correctAnswer) div.classList.add('correct-answer');
+    else div.classList.add('wrong-answer');
+    answersReview.appendChild(div);
   });
 }
 
 // Leaderboard
-showLeaderboardBtn.addEventListener('click', async ()=>{
-  leaderboardEntries.innerHTML='Loading...';
-  leaderboardModal.style.display='flex';
-  try {
-    const q = query(
-      collection(db,'students'),
-      where("day","==",currentDay),
-      orderBy("score","desc"),
-      orderBy("timeSpent","asc"),
-      limit(10)
-    );
-    const snapshot = await getDocs(q);
-    if(snapshot.empty){
-      leaderboardEntries.innerHTML='No entries yet';
-      return;
-    }
-    let table = `<table class="leaderboard-table"><thead><tr><th>Rank</th><th>Name</th><th>Score</th></tr></thead><tbody>`;
-    let rank = 1;
-    snapshot.forEach((doc) => {
-      const d = doc.data();
-      const isCurrent = d.name === studentName;
-      table += `<tr class="${isCurrent ? 'leaderboard-student' : ''}"><td>${rank}</td><td>${d.name}</td><td>${d.score}</td></tr>`;
-      rank++;
-    });
-    table += `</tbody></table>`;
-    leaderboardEntries.innerHTML = table;
-  } catch(err) {
-    console.error(err);
-    leaderboardEntries.innerHTML='Error loading leaderboard. Make sure Firestore index exists.';
-  }
-});
-closeLeaderboardBtn.addEventListener('click',()=>{ leaderboardModal.style.display='none'; });
+showLeaderboardBtn.addEventListener('click',()=>showLeaderboard(studentName));
+closeLeaderboardBtn.addEventListener('click',()=>leaderboardModal.style.display='none');
 </script>
 </body>
 </html>
+
+
 
