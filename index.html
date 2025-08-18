@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Define a subtle animation for the background */
+        
         @keyframes subtlePulse {
             0%, 100% {
                 transform: scale(1);
@@ -19,7 +19,7 @@
             }
         }
 
-        /* Define a subtle animation for the background gradient */
+        
         @keyframes gradientShift {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
@@ -32,23 +32,23 @@
             color: #f3f4f6;
             font-family: 'Inter', sans-serif;
 
-            /* Add a subtle animated gradient to the background */
+           
             background-image: linear-gradient(-45deg, #1a1a1a, #2c2c2c);
             background-size: 200% 200%;
             animation: gradientShift 15s ease infinite;
 
-            /* Full screen layout */
+            
             height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             text-align: center;
             margin: 0;
-            overflow: hidden; /* Prevent scrollbars from animations */
+            overflow: hidden; 
         }
 
         .message-container {
-            /* Apply the animation to the text container */
+            
             animation: subtlePulse 2.5s ease-in-out infinite;
         }
     </style>
