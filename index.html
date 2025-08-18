@@ -1,31 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Next Quiz</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* Floating animation */
-    @keyframes float {
-      0% { transform: translateY(0px); }
-      50% { transform: translateY(-15px); }
-      100% { transform: translateY(0px); }
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Next Quiz Coming Soon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Define a subtle animation for the background */
+        @keyframes subtlePulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 1;
+            }
+        }
 
-    /* Glowing text */
-    .glow {
-      text-shadow: 0 0 10px #fff,
-                   0 0 20px #ff00ff,
-                   0 0 30px #ff00ff,
-                   0 0 40px #ff00ff;
-    }
-  </style>
+        /* Define a subtle animation for the background gradient */
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        body {
+            /* Set a black and white theme */
+            background-color: #1a1a1a;
+            color: #f3f4f6;
+            font-family: 'Inter', sans-serif;
+
+            /* Add a subtle animated gradient to the background */
+            background-image: linear-gradient(-45deg, #1a1a1a, #2c2c2c);
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease infinite;
+
+            /* Full screen layout */
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            margin: 0;
+            overflow: hidden; /* Prevent scrollbars from animations */
+        }
+
+        .message-container {
+            /* Apply the animation to the text container */
+            animation: subtlePulse 2.5s ease-in-out infinite;
+        }
+    </style>
 </head>
-<body class="flex items-center justify-center h-screen bg-gradient-to-br from-purple-500 to-indigo-600">
-  <h1 class="text-4xl md:text-6xl font-bold text-white glow animate-pulse"
-      style="animation: float 3s ease-in-out infinite;">
-    Next Quiz Tomorrow
-  </h1>
+<body class="antialiased">
+    <div class="message-container p-6">
+        <h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight">
+            Wait for the next quiz...
+        </h1>
+        <p class="mt-4 text-lg sm:text-xl font-medium opacity-75">
+            The next quiz will be announced here soon. Stay tuned!
+        </p>
+    </div>
 </body>
 </html>
