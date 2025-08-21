@@ -3,353 +3,191 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESAG Quiz Center</title>
+<title>ESAG Quiz Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-.correct-answer { background-color: #d1fae5; border-color: #10b981; }
-.correct-answer-text { color: #10b981; }
-.wrong-answer { background-color: #fee2e2; border-color: #ef4444; }
-.wrong-answer-text { color: #ef4444; }
-#quiz-header { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background-color: white; box-shadow: 0 2px 6px rgba(0,0,0,0.1); padding: 1rem 2rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
-.main-quiz-container { padding-top: 120px; transform: translateY(100px);}
-.fade-in { opacity: 0; transform: translateY(20px); animation: fadeInUp 0.5s ease-out forwards; margin-left:auto;margin-right:auto; max-width:700px;}
+.container { max-width: 900px; margin-left: auto; margin-right: auto; padding: 2rem; }
+.input-field { width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; margin-bottom: 1rem; }
+.btn-primary { background-color: #3b82f6; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; transition: background-color 0.2s; }
+.btn-primary:hover { background-color: #2563eb; }
+.btn-danger { background-color: #ef4444; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; }
+.btn-danger:hover { background-color: #dc2626; }
+.btn-warning { background-color: #f59e0b; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; }
+.btn-warning:hover { background-color: #d97706; }
+.fade-in { opacity: 0; transform: translateY(20px); animation: fadeInUp 0.5s ease-out forwards; }
 @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
-.option-btn { transition: all 0.25s ease; cursor: pointer; }
-.option-btn:hover { transform: scale(1.02); background-color: #e0f2fe; box-shadow: 0 6px 15px rgba(0,0,0,0.18); }
-.option-btn:active { transform: scale(0.97); box-shadow: none; }
-.slide-in { transform: translateY(-20px); opacity: 0; animation: slideIn 0.6s cubic-bezier(0.25,1.25,0.5,1) forwards; }
-@keyframes slideIn { to { transform: translateY(0); opacity: 1; } }
-.blinking { animation: blink 1s infinite; }
-@keyframes blink { 0%,100%{border-color:#fa4545;color:white;} 50%{border-color:#1a1a1a;color:black;} }
-.modal { position: fixed; inset: 0; display: flex; justify-content: center; align-items: center; z-index: 2000; background-color: rgba(0,0,0,0.6); }
-#leaderboard-modal { display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 4000; animation: fadeInModal 0.3s ease-out forwards; }
-#leaderboard-content { background:white; padding:2rem; border-radius:1rem; max-width:600px; width:90%; text-align:center; position: relative; z-index: 10; }
-@keyframes fadeInModal { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-#day-selection { display:none; text-align:center; margin-top:150px; }
-.day-btn { margin:0.5rem 1rem; padding:0.5rem 1.5rem; background:#3b82f6; color:white; border-radius:0.5rem; cursor:pointer; }
-.day-btn:hover { background:#2563eb; }
-.leaderboard-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; text-align: center; border-radius: 10px; border: 1px solid #d8d6d6; overflow: hidden; }
-.leaderboard-table th, .leaderboard-table td { border: 1px solid #ddd; padding: 8px; }
-.leaderboard-table th { background-color: #ffffff; color: rgb(0, 0, 0); }
-.leaderboard-student { background-color: #78f56d;}
-.leaderboard-table tr:hover { background-color: #d3d3d3; }
-#nameBox{ animation: popup 0.5s ease-in forwards;}
-@keyframes popup { 0%{scale: 90%; opacity: 0; transform: scaleX(75%) scaleY(90%);} 50%{scale: 105%; transform: scaleX(100%); opacity: 1;} 70%{transform: scaleY(100%);} 100%{scale: 100%; }}
-.leaderboard-row { opacity: 0; transform: translateX(-50px); animation: fadeInRow 0.5s forwards; }
-@keyframes fadeInRow { to { opacity: 1; transform: translateX(0); } }
-.leaderboard-table td:nth-child(1){ border-right: none; }
-.leaderboard-table td:nth-child(2) { border-left: none; border-right: none; }
-.leaderboard-table td:nth-child(3) { border-left: none; }
-#confetti-canvas { position:absolute; inset:0; pointer-events:none; z-index:4000; width: 100%; height: 100%; }
-.alert-modal-content { animation: popup 0.5s ease-in forwards; }
 </style>
 </head>
-<body class="flex flex-col items-center min-h-screen">
+<body class="bg-gray-100 text-gray-800">
 
-<div id="name-modal" class="modal">
-  <div id="nameBox" class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center">
-    <h2 class="text-2xl font-bold text-gray-800 mb-4">Welcome to the ESAG Quiz Center!</h2>
-    <p class="text-gray-600 mb-6">Please enter your name to begin.</p>
-    <input type="text" id="student-name-input" placeholder="Your Name"
-           class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 mb-4">
-    <button id="start-quiz-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-blue-700 transition">
-      Continue
-    </button>
-  </div>
-</div>
+<div class="container mt-10 fade-in">
+    <h1 class="text-3xl font-bold text-center mb-8">ESAG Quiz Admin Panel 🛠️</h1>
 
-<div id="alert-modal" class="modal hidden">
-    <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center alert-modal-content">
-        <div class="p-4 bg-red-100 rounded-lg text-red-700 mb-4">
-            <h3 class="font-bold">Name Taken!</h3>
-            <p class="text-sm mt-1">This name is already in use. Please try a different name.</p>
-        </div>
-        <button id="close-alert-btn" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-red-700 transition">
-            Close
-        </button>
+    <div class="bg-white p-8 rounded-xl shadow-lg mb-8">
+        <h2 id="form-title" class="text-2xl font-bold mb-4">Add New Question</h2>
+        <form id="question-form">
+            <input type="hidden" id="question-id">
+            <input type="hidden" id="question-day" value="Day 1">
+            <div class="mb-4">
+                <label class="block text-gray-700 font-bold mb-2">Question Image URL</label>
+                <input type="text" id="question-image" class="input-field" placeholder="e.g., https://example.com/image.png" required>
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 font-bold mb-2">Correct Answer (1-5)</label>
+                <input type="number" id="correct-answer" class="input-field" min="1" max="5" placeholder="e.g., 2" required>
+            </div>
+            <button type="submit" id="submit-btn" class="btn-primary w-full">Add Question</button>
+            <button type="button" id="cancel-edit-btn" class="btn-warning w-full mt-2 hidden">Cancel Edit</button>
+        </form>
     </div>
-</div>
 
-<div id="day-selection" class="hidden">
-  <h2 class="text-2xl font-bold mb-4">Physics MCQ Quiz</h2>
-  <p class="text-2xl">This quiz is timed ⏳<br>Good luck :)</p>
-  <button class="day-btn">Start Quiz</button>
-</div>
-
-<header id="quiz-header" class="hidden">
-  <h1 class="text-2xl font-bold text-gray-800">Physics MCQ Quiz</h1>
-  <div id="timer-box" class="flex items-center bg-gray-100 px-3 py-2 rounded-full border border-gray-300 shadow-sm transition">
-    <img src="https://www.svgrepo.com/show/155032/sand-clock.svg" alt="Hourglass" class="h-6 w-6">
-    <div id="timer" class="ml-2 text-lg font-semibold text-gray-800 w-16 text-center tabular-nums">25:00</div>
-  </div>
-</header>
-
-<div id="quiz-wrapper" class="hidden bg-white p-6 md:p-10 rounded-xl shadow-2xl max-w-2xl w-full main-quiz-container">
-  <div id="quiz-container"></div>
-  <button id="submit-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-blue-700 transition mt-6">
-    Submit Quiz
-  </button>
-
-  <div id="results-container" class="hidden mt-6">
-    <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Quiz Results</h2>
-    <div id="score-display" class="text-center text-2xl font-semibold mb-6"></div>
-    <div id="answers-review"></div>
-    <button id="show-leaderboard-btn" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-green-700 transition mt-3 hidden">
-      Show Leaderboard
-    </button>
-  </div>
-</div>
-
-<div id="leaderboard-modal" class="modal">
-  <canvas id="confetti-canvas"></canvas>
-  <div id="leaderboard-content">
-    <h2 class="text-2xl font-bold mb-4">Leaderboard</h2>
-    <div id="leaderboard-entries" class="mb-4"></div>
-    <button id="close-leaderboard-btn" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition">Close</button>
-  </div>
+    <div class="bg-white p-8 rounded-xl shadow-lg">
+        <h2 class="text-2xl font-bold mb-4">Existing Questions</h2>
+        <div id="questions-list" class="space-y-6">
+            <p class="text-center text-gray-500">Loading questions...</p>
+        </div>
+    </div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, getDocs, query, orderBy, limit, where } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, where, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyA9cJ_wC_6h5PWRMw96rUDrMBE_uCIClF8",
-  authDomain: "esag-mcq-project.firebaseapp.com",
-  projectId: "esag-mcq-project",
-  storageBucket: "esag-mcq-project.appspot.com",
-  messagingSenderId: "53701860084",
-  appId: "1:53701860084:web:eca61389e9860ccbed1ca1",
-  measurementId: "G-PNFL3KQ68K"
+    apiKey: "AIzaSyA9cJ_wC_6h5PWRMw96rUDrMBE_uCIClF8",
+    authDomain: "esag-mcq-project.firebaseapp.com",
+    projectId: "esag-mcq-project",
+    storageBucket: "esag-mcq-project.appspot.com",
+    messagingSenderId: "53701860084",
+    appId: "1:53701860084:web:eca61389e9860ccbed1ca1",
+    measurementId: "G-PNFL3KQ68K"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const questionsCollection = collection(db, "questions");
 
-const setTime = 25;
-const collectionName = 'students';
-const timerDisplay = document.getElementById('timer');
-const timerBox = document.getElementById('timer-box');
-const quizContainer = document.getElementById('quiz-container');
-const resultsContainer = document.getElementById('results-container');
+const form = document.getElementById('question-form');
+const questionImageInput = document.getElementById('question-image');
+const correctAnswerInput = document.getElementById('correct-answer');
+const questionsList = document.getElementById('questions-list');
 const submitBtn = document.getElementById('submit-btn');
-const scoreDisplay = document.getElementById('score-display');
-const answersReview = document.getElementById('answers-review');
-const nameModal = document.getElementById('name-modal');
-const startQuizBtn = document.getElementById('start-quiz-btn');
-const studentNameInput = document.getElementById('student-name-input');
-const quizWrapper = document.getElementById('quiz-wrapper');
-const daySelection = document.getElementById('day-selection');
-const showLeaderboardBtn = document.getElementById('show-leaderboard-btn');
-const leaderboardModal = document.getElementById('leaderboard-modal');
-const leaderboardEntries = document.getElementById('leaderboard-entries');
-const closeLeaderboardBtn = document.getElementById('close-leaderboard-btn');
-const quizHeader = document.getElementById('quiz-header');
-const confettiCanvas = document.getElementById('confetti-canvas');
-const alertModal = document.getElementById('alert-modal');
-const closeAlertBtn = document.getElementById('close-alert-btn');
+const cancelEditBtn = document.getElementById('cancel-edit-btn');
+const formTitle = document.getElementById('form-title');
+const questionIdInput = document.getElementById('question-id');
 
-let studentName='', studentID='', userAnswers={}, timeLeft=setTime*60, timerInterval, currentDay='Day 1';
+let currentDay = 'Day 1';
 
-const savedName = localStorage.getItem("studentName");
-if (savedName) studentNameInput.value = savedName;
-const savedID = localStorage.getItem("studentID");
-if (savedID) studentID = savedID;
-
-// Fetch quiz from Firestore
-async function fetchQuizQuestions(day) {
-  const quizData = [];
-  try {
-    const q = query(collection(db, "questions"), where("day", "==", day));
-    const snapshot = await getDocs(q);
-    const sortedDocs = snapshot.docs.sort((a, b) => parseInt(a.id.replace('Q','')) - parseInt(b.id.replace('Q','')));
-    sortedDocs.forEach(doc => {
-      const data = doc.data();
-      quizData.push({
-        questionImage: data.questionImage || '',
-        options: data.options || [],
-        correctAnswer: data.correctAnswer || ''
-      });
-    });
-    return quizData;
-  } catch (err) {
-    console.error("Error fetching quiz questions:", err);
-    return [];
-  }
-}
-
-// Leaderboard function
-async function showLeaderboard(currentStudent){
-  leaderboardEntries.innerHTML='Loading...';
-  leaderboardModal.style.display='flex';
-  const confettiInstance = confetti.create(confettiCanvas, { resize:true, useWorker:true });
-  try {
-    const q = query(
-      collection(db, collectionName),
-      where("day", "==", currentDay),
-      orderBy("score","desc"),
-      orderBy("timeSpent","asc"),
-      limit(10)
-    );
-    const snapshot = await getDocs(q);
-    if(snapshot.empty){ leaderboardEntries.innerHTML='No entries yet'; return; }
-
-    let table = `<table class="leaderboard-table"><thead><tr><th>Rank</th><th>Name</th><th>Score</th></tr></thead><tbody>`;
-    let rank = 1;
-    snapshot.forEach((doc) => {
-      const d = doc.data();
-      const isCurrent = d.name === currentStudent;
-      table += `<tr class="leaderboard-row ${isCurrent ? 'leaderboard-student' : ''}" style="animation-delay:${(rank-1)*0.1}s"><td>${rank}</td><td>${d.name}</td><td>${d.score}</td></tr>`;
-      if(isCurrent) confettiInstance({ particleCount: 80, spread: 70, origin: { y: 0.3 } });
-      rank++;
-    });
-    table += `</tbody></table>`;
-    leaderboardEntries.innerHTML = table;
-  } catch(err) {
-    console.error(err);
-    leaderboardEntries.innerHTML='Error loading leaderboard.';
-  }
-}
-
-// Name modal logic
-startQuizBtn.addEventListener('click', async () => {
-  studentName = studentNameInput.value.trim();
-  if(!studentName) {
-    alertModal.querySelector('h3').textContent = 'Name Required!';
-    alertModal.querySelector('p').textContent = 'Please enter your name to continue.';
-    alertModal.style.display = 'flex';
-    return;
-  }
-  const nameQuery = query(collection(db, collectionName), where("name","==",studentName));
-  const snapshot = await getDocs(nameQuery);
-
-  if(!studentID) {
-    studentID = crypto.randomUUID();
-    localStorage.setItem("studentID", studentID);
-  }
-
-  if(!snapshot.empty){
-    const data = snapshot.docs[0].data();
-    if(data.id !== studentID){
-      alertModal.querySelector('h3').textContent = 'Name Taken!';
-      alertModal.querySelector('p').textContent = 'This name is already in use. Please try a different name.';
-      alertModal.style.display = 'flex';
-      return;
+async function fetchQuestions() {
+    questionsList.innerHTML = '<p class="text-center text-gray-500">Loading questions...</p>';
+    try {
+        const q = query(questionsCollection, where("day", "==", currentDay), orderBy('id', 'asc'));
+        const snapshot = await getDocs(q);
+        const questions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderQuestions(questions);
+    } catch (error) {
+        console.error("Error fetching questions:", error);
+        questionsList.innerHTML = '<p class="text-center text-red-500">Error loading questions.</p>';
     }
-    const savedAnswers = data.answers || {};
-    const savedScore = data.score || 0;
-    nameModal.style.display = 'none';
-    quizWrapper.style.display = 'block';
-    quizHeader.classList.remove('hidden');
-    resultsContainer.classList.remove('hidden');
-    submitBtn.style.display = 'none';
-    scoreDisplay.textContent = `Your Score: ${savedScore}`;
-    answersReview.innerHTML='';
-    showLeaderboardBtn.classList.remove('hidden');
-    localStorage.setItem("studentName", studentName);
-    return;
-  }
+}
 
-  nameModal.style.display = 'none';
-  daySelection.style.display = 'block';
-  localStorage.setItem("studentName", studentName);
+function renderQuestions(questions) {
+    questionsList.innerHTML = '';
+    if (questions.length === 0) {
+        questionsList.innerHTML = '<p class="text-center text-gray-500">No questions found for this day. Add a new one!</p>';
+        return;
+    }
+    questions.forEach(q => {
+        const questionCard = document.createElement('div');
+        questionCard.className = "bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-sm fade-in";
+        questionCard.innerHTML = `
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold">Question ${q.id}</h3>
+                <div>
+                    <button class="btn-warning edit-btn" data-id="${q.id}">Edit</button>
+                    <button class="btn-danger delete-btn" data-id="${q.id}">Delete</button>
+                </div>
+            </div>
+            <div class="mb-4">
+                <img src="${q.questionImage}" alt="Question Image" class="w-full h-auto object-contain max-h-60 rounded-md">
+            </div>
+            <p class="font-bold mt-2">Correct Answer: Option ${q.correctAnswer}</p>
+        `;
+        questionsList.appendChild(questionCard);
+    });
+
+    document.querySelectorAll('.edit-btn').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const id = e.target.dataset.id;
+            const docRef = doc(db, 'questions', id);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                questionIdInput.value = id;
+                questionImageInput.value = data.questionImage;
+                correctAnswerInput.value = data.correctAnswer;
+                formTitle.textContent = `Edit Question ${id}`;
+                submitBtn.textContent = 'Save Changes';
+                cancelEditBtn.classList.remove('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+    });
+
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            if (confirm("Are you sure you want to delete this question?")) {
+                const id = e.target.dataset.id;
+                await deleteDoc(doc(db, 'questions', id));
+                fetchQuestions();
+            }
+        });
+    });
+}
+
+function clearForm() {
+    questionIdInput.value = '';
+    questionImageInput.value = '';
+    correctAnswerInput.value = '';
+    formTitle.textContent = 'Add New Question';
+    submitBtn.textContent = 'Add Question';
+    cancelEditBtn.classList.add('hidden');
+}
+
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = questionIdInput.value;
+    const questionData = {
+        questionImage: questionImageInput.value,
+        options: ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"], // Hardcoded options
+        correctAnswer: parseInt(correctAnswerInput.value),
+        day: currentDay
+    };
+
+    if (!questionData.questionImage || !questionData.correctAnswer) {
+        alert("Please fill in all fields.");
+        return;
+    }
+
+    if (id) {
+        // Update
+        await setDoc(doc(db, 'questions', id), questionData);
+    } else {
+        // Add new
+        const newDocRef = doc(questionsCollection);
+        await setDoc(newDocRef, questionData);
+    }
+    clearForm();
+    fetchQuestions();
 });
 
-closeAlertBtn.addEventListener('click', () => { alertModal.style.display = 'none'; });
-studentNameInput.addEventListener('keydown', e=>{ if(e.key==='Enter') startQuizBtn.click(); });
-
-// Middle page start button
-document.querySelector('.day-btn').addEventListener('click', () => {
-  daySelection.style.display = 'none';
-  quizWrapper.style.display = 'block';
-  quizHeader.classList.remove('hidden');
-  fetchQuizQuestions(currentDay).then(fetchedQuiz => {
-    if(fetchedQuiz.length === 0){ alert("No questions found for this day!"); return; }
-    renderAllQuestions(fetchedQuiz);
-    submitBtn.onclick = () => submitQuiz(fetchedQuiz);
-    startTimer();
-  });
+cancelEditBtn.addEventListener('click', () => {
+    clearForm();
 });
 
-// Render questions
-function renderAllQuestions(quiz){
-  quizContainer.innerHTML='';
-  quiz.forEach((q,i)=>{
-    const card = document.createElement('div');
-    card.className="mb-8 p-6 bg-gray-50 rounded-lg border-2 border-gray-100 shadow-md fade-in";
-    let optionsHtml='';
-    q.options.forEach((opt,oi)=>{
-      optionsHtml+=`<button class="w-full text-left bg-gray-100 text-gray-800 font-medium py-3 px-4 rounded-lg border-2 border-gray-300 option-btn" data-question-index="${i}" data-option="${oi+1}">${opt}</button>`;
-    });
-    card.innerHTML=`<h2 class="text-xl font-semibold text-gray-700 mb-4">Question ${i+1}</h2>
-      <div class="rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm mb-4">
-        <img class="w-full h-auto object-cover" src="${q.questionImage}" alt="Question ${i+1}">
-      </div>
-      <div class="options-container grid gap-4">${optionsHtml}</div>`;
-    quizContainer.appendChild(card);
-  });
-
-  document.querySelectorAll('.option-btn').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const qIndex = btn.dataset.questionIndex;
-      const option = btn.dataset.option;
-      userAnswers[qIndex] = option;
-      const siblings = btn.parentElement.querySelectorAll('button');
-      siblings.forEach(sib => sib.classList.remove('bg-blue-200'));
-      btn.classList.add('bg-blue-200');
-    });
-  });
-}
-
-// Timer
-function startTimer(){
-  timerInterval = setInterval(()=>{
-    if(timeLeft<=0){ clearInterval(timerInterval); submitBtn.click(); return; }
-    let minutes = Math.floor(timeLeft/60).toString().padStart(2,'0');
-    let seconds = (timeLeft%60).toString().padStart(2,'0');
-    timerDisplay.textContent = `${minutes}:${seconds}`;
-    timeLeft--;
-  },1000);
-}
-
-// Submit quiz
-async function submitQuiz(quiz){
-  clearInterval(timerInterval);
-  let score=0;
-  answersReview.innerHTML='';
-  quiz.forEach((q,i)=>{
-    const selected = userAnswers[i] || '';
-    const isCorrect = selected == q.correctAnswer;
-    if(isCorrect) score++;
-    const card = document.createElement('div');
-    card.className=`mb-4 p-4 rounded-lg border-2 ${isCorrect?'correct-answer':'wrong-answer'}`;
-    const optText = selected ? q.options[selected-1] : 'No answer';
-    card.innerHTML=`<h3 class="font-semibold mb-2">Question ${i+1}</h3>
-      <p><span class="${isCorrect?'correct-answer-text':'wrong-answer-text'}">Your Answer:</span> ${optText}</p>
-      <p class="mt-1 text-gray-700">Correct Answer: ${q.options[q.correctAnswer-1]}</p>`;
-    answersReview.appendChild(card);
-  });
-
-  scoreDisplay.textContent=`Your Score: ${score}`;
-  submitBtn.style.display='none';
-  showLeaderboardBtn.classList.remove('hidden');
-
-  const studentDocRef = doc(db, collectionName, studentID);
-  await setDoc(studentDocRef, {
-    id: studentID,
-    name: studentName,
-    score,
-    day: currentDay,
-    timeSpent: setTime*60 - timeLeft,
-    answers: userAnswers
-  });
-}
-
-// Leaderboard
-showLeaderboardBtn.addEventListener('click', ()=> showLeaderboard(studentName));
-closeLeaderboardBtn.addEventListener('click', ()=> leaderboardModal.style.display='none');
+fetchQuestions();
 </script>
 
 </body>
