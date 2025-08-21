@@ -53,7 +53,7 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, where, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, where, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyA9cJ_wC_6h5PWRMw96rUDrMBE_uCIClF8",
@@ -79,13 +79,31 @@ const formTitle = document.getElementById('form-title');
 const questionIdInput = document.getElementById('question-id');
 
 let currentDay = 'Day 1';
+let nextQuestionNumber = 1;
 
 async function fetchQuestions() {
     questionsList.innerHTML = '<p class="text-center text-gray-500">Loading questions...</p>';
     try {
-        const q = query(questionsCollection, where("day", "==", currentDay), orderBy('id', 'asc'));
+        // Query without orderBy to avoid composite index error
+        const q = query(questionsCollection, where("day", "==", currentDay));
         const snapshot = await getDocs(q);
-        const questions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        let questions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Sort on the client-side
+        questions.sort((a, b) => {
+            const numA = parseInt(a.id.replace('Q', '')) || 0;
+            const numB = parseInt(b.id.replace('Q', '')) || 0;
+            return numA - numB;
+        });
+
+        if (questions.length > 0) {
+            const lastQuestionId = questions[questions.length - 1].id;
+            const lastNumber = parseInt(lastQuestionId.replace('Q', '')) || 0;
+            nextQuestionNumber = lastNumber + 1;
+        } else {
+            nextQuestionNumber = 1;
+        }
+
         renderQuestions(questions);
     } catch (error) {
         console.error("Error fetching questions:", error);
@@ -161,7 +179,7 @@ form.addEventListener('submit', async (e) => {
     const id = questionIdInput.value;
     const questionData = {
         questionImage: questionImageInput.value,
-        options: ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"], // Hardcoded options
+        options: ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"],
         correctAnswer: parseInt(correctAnswerInput.value),
         day: currentDay
     };
@@ -172,12 +190,10 @@ form.addEventListener('submit', async (e) => {
     }
 
     if (id) {
-        // Update
         await setDoc(doc(db, 'questions', id), questionData);
     } else {
-        // Add new
-        const newDocRef = doc(questionsCollection);
-        await setDoc(newDocRef, questionData);
+        const newId = `Q${nextQuestionNumber}`;
+        await setDoc(doc(questionsCollection, newId), questionData);
     }
     clearForm();
     fetchQuestions();
