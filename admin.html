@@ -1,10 +1,9 @@
-<!--Developed by S3n;t-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quiz Center</title>
+<title>ESAG Quiz Center</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -75,7 +74,7 @@ body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
 </div>
 
 <div id="day-selection" class="hidden">
-  <h2 class="text-2xl font-bold mb-4">Physics MCQ Day 2</h2>
+  <h2 class="text-2xl font-bold mb-4">Physics MCQ Quiz</h2>
   <p class="text-2xl">This quiz is timed ⏳<br>Good luck :)</p>
   <button class="day-btn">Start Quiz</button>
 </div>
@@ -129,20 +128,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const quizzes = {
-  "Day 1": [
-    { questionImage:"image/1.png", options:["1","2","3","4","5"], correctAnswer:"4" },
-    { questionImage:"image/2.png", options:["1","2","3","4","5"], correctAnswer:"5" },
-    { questionImage:"image/3.png", options:["1","2","3","4","5"], correctAnswer:"4" },
-    { questionImage:"image/4.png", options:["1","2","3","4","5"], correctAnswer:"3" },
-    { questionImage:"image/5.png", options:["1","2","3","4","5"], correctAnswer:"3" },
-    { questionImage:"image/6.png", options:["1","2","3","4","5"], correctAnswer:"3" },
-    { questionImage:"image/7.png", options:["1","2","3","4","5"], correctAnswer:"3" },
-    { questionImage:"image/8.png", options:["1","2","3","4","5"], correctAnswer:"5" },
-    { questionImage:"image/9.png", options:["1","2","3","4","5"], correctAnswer:"4" },
-    { questionImage:"image/10.png", options:["1","2","3","4","5"], correctAnswer:"2" }
-  ]
-};
 const setTime = 25;
 const collectionName = 'students';
 const timerDisplay = document.getElementById('timer');
@@ -168,11 +153,32 @@ const closeAlertBtn = document.getElementById('close-alert-btn');
 
 let studentName='', studentID='', userAnswers={}, timeLeft=setTime*60, timerInterval, currentDay='Day 1';
 
-// Prefill saved name and ID
 const savedName = localStorage.getItem("studentName");
 if (savedName) studentNameInput.value = savedName;
 const savedID = localStorage.getItem("studentID");
 if (savedID) studentID = savedID;
+
+// Fetch quiz from Firestore
+async function fetchQuizQuestions(day) {
+  const quizData = [];
+  try {
+    const q = query(collection(db, "questions"), where("day", "==", day));
+    const snapshot = await getDocs(q);
+    const sortedDocs = snapshot.docs.sort((a, b) => parseInt(a.id.replace('Q','')) - parseInt(b.id.replace('Q','')));
+    sortedDocs.forEach(doc => {
+      const data = doc.data();
+      quizData.push({
+        questionImage: data.questionImage || '',
+        options: data.options || [],
+        correctAnswer: data.correctAnswer || ''
+      });
+    });
+    return quizData;
+  } catch (err) {
+    console.error("Error fetching quiz questions:", err);
+    return [];
+  }
+}
 
 // Leaderboard function
 async function showLeaderboard(currentStudent){
@@ -211,13 +217,11 @@ async function showLeaderboard(currentStudent){
 startQuizBtn.addEventListener('click', async () => {
   studentName = studentNameInput.value.trim();
   if(!studentName) {
-    // Re-using the same modal for "Please enter your name"
     alertModal.querySelector('h3').textContent = 'Name Required!';
     alertModal.querySelector('p').textContent = 'Please enter your name to continue.';
     alertModal.style.display = 'flex';
     return;
   }
-
   const nameQuery = query(collection(db, collectionName), where("name","==",studentName));
   const snapshot = await getDocs(nameQuery);
 
@@ -229,13 +233,11 @@ startQuizBtn.addEventListener('click', async () => {
   if(!snapshot.empty){
     const data = snapshot.docs[0].data();
     if(data.id !== studentID){
-      // Show custom name taken modal instead of alert()
       alertModal.querySelector('h3').textContent = 'Name Taken!';
       alertModal.querySelector('p').textContent = 'This name is already in use. Please try a different name.';
       alertModal.style.display = 'flex';
       return;
     }
-    // Student exists → show result sheet
     const savedAnswers = data.answers || {};
     const savedScore = data.score || 0;
     nameModal.style.display = 'none';
@@ -243,47 +245,32 @@ startQuizBtn.addEventListener('click', async () => {
     quizHeader.classList.remove('hidden');
     resultsContainer.classList.remove('hidden');
     submitBtn.style.display = 'none';
-    scoreDisplay.textContent = `Your Score: ${savedScore} / ${quizzes[currentDay].length}`;
+    scoreDisplay.textContent = `Your Score: ${savedScore}`;
     answersReview.innerHTML='';
-    quizzes[currentDay].forEach((q,i)=>{
-      const ans = savedAnswers[i] || '';
-      const div = document.createElement('div');
-      div.className='mb-6 p-4 rounded-lg border';
-      div.innerHTML=`<div class="mb-3 rounded overflow-hidden border-2 border-gray-200 shadow-sm">
-        <img class="w-full h-auto object-cover" src="${q.questionImage}" alt="Question ${i+1}">
-      </div>
-      <p class="${ans==q.correctAnswer?'correct-answer-text':'wrong-answer-text'}">
-        Q${i+1} - Your Answer: ${ans || "No Answer"} | Correct: ${q.correctAnswer}
-      </p>`;
-      if(ans==q.correctAnswer) div.classList.add('correct-answer');
-      else div.classList.add('wrong-answer');
-      answersReview.appendChild(div);
-    });
     showLeaderboardBtn.classList.remove('hidden');
     localStorage.setItem("studentName", studentName);
     return;
   }
 
-  // Name not taken → proceed
   nameModal.style.display = 'none';
   daySelection.style.display = 'block';
   localStorage.setItem("studentName", studentName);
 });
 
-// Close alert modal logic
-closeAlertBtn.addEventListener('click', () => {
-    alertModal.style.display = 'none';
-});
-
+closeAlertBtn.addEventListener('click', () => { alertModal.style.display = 'none'; });
 studentNameInput.addEventListener('keydown', e=>{ if(e.key==='Enter') startQuizBtn.click(); });
 
-// Middle page
+// Middle page start button
 document.querySelector('.day-btn').addEventListener('click', () => {
   daySelection.style.display = 'none';
   quizWrapper.style.display = 'block';
   quizHeader.classList.remove('hidden');
-  renderAllQuestions(quizzes[currentDay]);
-  startTimer();
+  fetchQuizQuestions(currentDay).then(fetchedQuiz => {
+    if(fetchedQuiz.length === 0){ alert("No questions found for this day!"); return; }
+    renderAllQuestions(fetchedQuiz);
+    submitBtn.onclick = () => submitQuiz(fetchedQuiz);
+    startTimer();
+  });
 });
 
 // Render questions
@@ -300,96 +287,70 @@ function renderAllQuestions(quiz){
       <div class="rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm mb-4">
         <img class="w-full h-auto object-cover" src="${q.questionImage}" alt="Question ${i+1}">
       </div>
-      <div class="options-container grid gap-3">${optionsHtml}</div>`;
+      <div class="options-container grid gap-4">${optionsHtml}</div>`;
     quizContainer.appendChild(card);
   });
-  quizContainer.addEventListener('click', e=>{
-    const target=e.target;
-    if(target.matches('[data-option]')){
-      const qIndex=target.dataset.questionIndex;
-      const opt=target.dataset.option;
-      handleAnswer(qIndex,opt);
-    }
-  });
-}
 
-// Handle answer
-function handleAnswer(qIndex,opt){
-  userAnswers[qIndex]=opt;
-  const opts=quizContainer.querySelectorAll(`[data-question-index="${qIndex}"]`);
-  opts.forEach(b=>b.classList.remove('bg-blue-200','border-blue-500'));
-  const selBtn=quizContainer.querySelector(`[data-question-index="${qIndex}"][data-option="${opt}"]`);
-  if(selBtn) selBtn.classList.add('bg-blue-200','border-blue-500');
+  document.querySelectorAll('.option-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const qIndex = btn.dataset.questionIndex;
+      const option = btn.dataset.option;
+      userAnswers[qIndex] = option;
+      const siblings = btn.parentElement.querySelectorAll('button');
+      siblings.forEach(sib => sib.classList.remove('bg-blue-200'));
+      btn.classList.add('bg-blue-200');
+    });
+  });
 }
 
 // Timer
 function startTimer(){
-  timerInterval=setInterval(()=>{
+  timerInterval = setInterval(()=>{
+    if(timeLeft<=0){ clearInterval(timerInterval); submitBtn.click(); return; }
+    let minutes = Math.floor(timeLeft/60).toString().padStart(2,'0');
+    let seconds = (timeLeft%60).toString().padStart(2,'0');
+    timerDisplay.textContent = `${minutes}:${seconds}`;
     timeLeft--;
-    const m=Math.floor(timeLeft/60).toString().padStart(2,'0');
-    const s=(timeLeft%60).toString().padStart(2,'0');
-    timerDisplay.textContent=`${m}:${s}`;
-    
-    // Add or remove blinking class based on time left
-    if(timeLeft < 60 && timeLeft > 0) {
-      timerBox.classList.add('blinking');
-    } else {
-      timerBox.classList.remove('blinking');
-    }
-
-    if(timeLeft <= 0){
-      clearInterval(timerInterval);
-      submitQuiz();
-    }
   },1000);
 }
 
-// Submit
-submitBtn.addEventListener('click', submitQuiz);
-function submitQuiz(){
+// Submit quiz
+async function submitQuiz(quiz){
   clearInterval(timerInterval);
-  const quizData = quizzes[currentDay];
   let score=0;
-  quizData.forEach((q,i)=>{
-    if(userAnswers[i]==q.correctAnswer) score++;
+  answersReview.innerHTML='';
+  quiz.forEach((q,i)=>{
+    const selected = userAnswers[i] || '';
+    const isCorrect = selected == q.correctAnswer;
+    if(isCorrect) score++;
+    const card = document.createElement('div');
+    card.className=`mb-4 p-4 rounded-lg border-2 ${isCorrect?'correct-answer':'wrong-answer'}`;
+    const optText = selected ? q.options[selected-1] : 'No answer';
+    card.innerHTML=`<h3 class="font-semibold mb-2">Question ${i+1}</h3>
+      <p><span class="${isCorrect?'correct-answer-text':'wrong-answer-text'}">Your Answer:</span> ${optText}</p>
+      <p class="mt-1 text-gray-700">Correct Answer: ${q.options[q.correctAnswer-1]}</p>`;
+    answersReview.appendChild(card);
   });
-  scoreDisplay.textContent=`Your Score: ${score} / ${quizData.length}`;
-  
-  // Hide quiz questions
-  quizContainer.style.display = 'none';
+
+  scoreDisplay.textContent=`Your Score: ${score}`;
   submitBtn.style.display='none';
-  resultsContainer.classList.remove('hidden');
   showLeaderboardBtn.classList.remove('hidden');
 
-  // Save to Firestore
-  const docRef = doc(db, collectionName, studentID);
-  setDoc(docRef, { name: studentName, id: studentID, day: currentDay, answers: userAnswers, score:score, timeSpent:setTime*60-timeLeft });
-
-  // Show answers
-  answersReview.innerHTML='';
-  quizData.forEach((q,i)=>{
-    const ans=userAnswers[i]||'';
-    const div=document.createElement('div');
-    div.className='mb-6 p-4 rounded-lg border';
-    div.innerHTML=`<div class="mb-3 rounded overflow-hidden border-2 border-gray-200 shadow-sm">
-      <img class="w-full h-auto object-cover" src="${q.questionImage}" alt="Question ${i+1}">
-    </div>
-    <p class="${ans==q.correctAnswer?'correct-answer-text':'wrong-answer-text'}">
-      Q${i+1} - Your Answer: ${ans||"No Answer"} | Correct: ${q.correctAnswer}
-    </p>`;
-    if(ans==q.correctAnswer) div.classList.add('correct-answer');
-    else div.classList.add('wrong-answer');
-    answersReview.appendChild(div);
+  const studentDocRef = doc(db, collectionName, studentID);
+  await setDoc(studentDocRef, {
+    id: studentID,
+    name: studentName,
+    score,
+    day: currentDay,
+    timeSpent: setTime*60 - timeLeft,
+    answers: userAnswers
   });
 }
 
 // Leaderboard
-showLeaderboardBtn.addEventListener('click',()=>showLeaderboard(studentName));
-closeLeaderboardBtn.addEventListener('click',()=>leaderboardModal.style.display='none');
+showLeaderboardBtn.addEventListener('click', ()=> showLeaderboard(studentName));
+closeLeaderboardBtn.addEventListener('click', ()=> leaderboardModal.style.display='none');
 </script>
+
 </body>
 </html>
-
-
-
-
